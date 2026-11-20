@@ -1059,7 +1059,7 @@
         endDate: "",
         time: "",
         venue: "GMC Thiruvallur College Auditorium",
-        description: 'The Department of Biochemistry, Government Medical College and Hospital, Thiruvallur invites you all to the International Hybrid CME on "CATENA 2027: Point of Care Tests Conclave for Clinicians" (Bridging the gap between testing and treatment). Highlights: Workshop, UG Quiz, PG Poster Presentation. Credit Points: TNMGRMU 20 Credit Points & TNMC Credit Hours Applied. Website: https://catena2027.netlify.app/',
+        description: 'The Department of Biochemistry, Government Medical College and Hospital, Thiruvallur invites you all to the International Hybrid CME on "CATENA 2027: Point of Care Tests Conclave for Clinicians" (Bridging the gap between testing and treatment). Highlights: Workshop, UG Quiz, and PG Poster Presentation. Credit Points: TNMGRMU 20 Credit Points & TNMC Credit Hours Applied. Website: https://catena2027.netlify.app/',
         tags: ["International CME", "Hybrid", "POCT", "TNMGRMU 20 Points", "TNMC Applied"],
         posterUrl: "catena-2027-poster.jpg",
         eventLink: "https://catena2027.netlify.app/"
@@ -1237,6 +1237,29 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    // Helper: Strip broken encoding artifacts and ensure clean standard ASCII
+    function cleanField(s) {
+      if (!s) return '';
+      let str = String(s);
+      // Strip out any broken encoding / mojibake artifacts from iframes
+      str = str.replace(/\u00E2\u20AC\u201C/g, '-')
+               .replace(/\u00E2\u20AC\u201D/g, '-')
+               .replace(/\u00E2\u20AC\u2122/g, "'")
+               .replace(/\u00E2\u20AC\u02DC/g, "'")
+               .replace(/\u00E2\u20AC\u0153/g, '"')
+               .replace(/\u00E2\u20AC/g, '"')
+               .replace(/\u00C2/g, '')
+               .replace(/\u00C3\u00A9/g, 'e')
+               .replace(/\u00C3/g, '');
+      // Convert all Unicode dashes, quotes, spaces to pure standard ASCII
+      str = str.replace(/[\u2010-\u2015\u2212]/g, '-')
+               .replace(/[\u2018-\u201B]/g, "'")
+               .replace(/[\u201C-\u201F]/g, '"')
+               .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ')
+               .replace(/[^\x20-\x7E\n]/g, ''); // pure standard printable ASCII only
+      return str.replace(/[ \t]+/g, ' ').trim();
     }
 
     // Helper: Format a single Date object to strict DD/MM/YYYY
@@ -1566,28 +1589,6 @@
       const item = currentSortedEvents[index];
       if (!item) return;
 
-      function cleanField(s) {
-        if (!s) return '';
-        let str = String(s);
-        // Strip out any broken encoding / mojibake artifacts from iframes
-        str = str.replace(/\u00E2\u20AC\u201C/g, '-')
-                 .replace(/\u00E2\u20AC\u201D/g, '-')
-                 .replace(/\u00E2\u20AC\u2122/g, "'")
-                 .replace(/\u00E2\u20AC\u02DC/g, "'")
-                 .replace(/\u00E2\u20AC\u0153/g, '"')
-                 .replace(/\u00E2\u20AC/g, '"')
-                 .replace(/\u00C2/g, '')
-                 .replace(/\u00C3\u00A9/g, 'e')
-                 .replace(/\u00C3/g, '');
-        // Convert all Unicode dashes, quotes, spaces to pure standard ASCII
-        str = str.replace(/[\u2010-\u2015\u2212]/g, '-')
-                 .replace(/[\u2018-\u201B]/g, "'")
-                 .replace(/[\u201C-\u201F]/g, '"')
-                 .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ')
-                 .replace(/[^\x20-\x7E\n]/g, ''); // pure standard printable ASCII only
-        return str.replace(/[ \t]+/g, ' ').trim();
-      }
-
       const title = cleanField(item.eventName || 'Academic Event');
       const date = cleanField(item.displayDate || item.eventDate);
       const venue = cleanField(item.venue || 'Tamil Nadu');
@@ -1734,9 +1735,15 @@
       renderEventsTable(currentSortedEvents);
     }
 
-    // Modal close on backdrop click
-    document.getElementById('wixModalBackdrop').addEventListener('click', function(e) {
-      if (e.target === this) closeWixModal();
+    // Modal event listeners (backdrop click & Escape key)
+    const modalBackdrop = document.getElementById('wixModalBackdrop');
+    if (modalBackdrop) {
+      modalBackdrop.addEventListener('click', function(e) {
+        if (e.target === this) closeWixModal();
+      });
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeWixModal();
     });
 
     // Auto-initialize
